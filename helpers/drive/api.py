@@ -40,7 +40,7 @@ def download_datasets(g, names):
         st.session_state[f'ds_{name}'] = df
 
 
-def save_results(g, values, annotator_id, seed, dataset_name, na_fraction):
+def save_results(g, values, annotator_id, seed, dataset_name, na_fraction, projection_key, MAE, RMSE):
     gsheet = g.gc.open_by_url(g.url)
     datasets = {"iris": 0, "wola": 1, "stamp_type": 2}
     worksheet_number = datasets[dataset_name]
@@ -52,6 +52,9 @@ def save_results(g, values, annotator_id, seed, dataset_name, na_fraction):
         annotator_id,
         seed,
         na_fraction,
-        str(values)
+        projection_key,
+        str(values),
+        str(MAE),
+        str(RMSE)
     ]
     wsheet.insert_row(row_data, len(data) + 1)

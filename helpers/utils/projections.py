@@ -5,21 +5,21 @@ import streamlit as st
 import plotly.express as px
 import pandas as pd
 
-@st.cache
+@st.cache_data
 def perform_pca_projection(X):
     tsne = PCA(n_components=2, random_state=0)
     X_projected = tsne.fit_transform(X)
     return X_projected
 
 
-@st.cache
+@st.cache_data
 def perform_umap_projection(X):
     umap_2d = UMAP(n_components=2, init='random', random_state=0)
     X_projected = umap_2d.fit_transform(X)
     return X_projected
 
 
-@st.cache
+@st.cache_data
 def perform_tsne_projection(X):
     tsne = TSNE(n_components=2, random_state=0)
     X_projected = tsne.fit_transform(X)

@@ -33,6 +33,28 @@ def init_session_state(datasets_settings):
         st.session_state['started'] = False
     if 'annotated_points' not in st.session_state:
         st.session_state['annotated_points'] = 0
+    # Domyślne wartości dla kluczy sesji
+    defaults = {
+        'started': False,
+        'annotated_points': 0,
+        'imputed_values': {},
+        'border_points': [],
+        'current_null_index': None,
+        'df_incomplete': None,
+        'X': None,
+        'min_value': 0.0,
+        'max_value': 1.0,
+        'y_pred_uncertain': [],
+        'dataset_generation_seed': None,
+        'seed_input': 0,
+        'force_seed_reload': False,
+        'pending_start': False,
+    }
+
+    for key, default in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = default
+
 
 
 def calculate_y_pred_uncertain(df_incomplete, dataset_settings):
@@ -51,8 +73,8 @@ def calculate_y_pred_uncertain(df_incomplete, dataset_settings):
     return X, y_pred, border_points
 
 
-def init_new_annotation_task(dataset_settings):
-    st.session_state['dataset_generation_seed'] = int(time.time())
+def init_new_annotation_task(dataset_settings,seed):
+    st.session_state['dataset_generation_seed'] = seed
 
     incomplete_column = dataset_settings['incomplete_column']
     df_incomplete = generate_incomplete_dataset(st.session_state['dataset_generation_seed'],
