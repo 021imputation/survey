@@ -1,4 +1,4 @@
-from umap import UMAP
+from umap.umap_ import UMAP
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 import streamlit as st
