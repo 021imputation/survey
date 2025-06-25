@@ -39,7 +39,9 @@ def find_uncertain_y_indexes(df_incomplete, dataset_settings, na_indexes):
     return indexes
 
 
-def save_results(values, seed, dataset_name, na_fraction,projection_key,MAE,RMSE):
+def save_results(values, seed, dataset_name, na_fraction,projection_key,MAE,RMSE,
+                 mean_preds, cluster_mean_preds, knn_preds, cluster_knn_preds,
+                 true_values):
     api.save_results(
         st.session_state["gsheet"],
         values,
@@ -49,5 +51,10 @@ def save_results(values, seed, dataset_name, na_fraction,projection_key,MAE,RMSE
         na_fraction,
         projection_key,
         MAE,
-        RMSE
+        RMSE,
+        mean_preds,
+        cluster_mean_preds,
+        knn_preds,
+        cluster_knn_preds,
+        true_values
     )

@@ -179,7 +179,12 @@ if st.session_state['started']:
                              na_fraction_selectbox,
                              projection_key,
                              MAE,  # Mean absolute error of imputations in order
-                             RMSE  # Root Mean Squared Error
+                             RMSE,  # Root Mean Squared Error
+                             [global_means.get(idx, None) for idx in na_indexes],
+                             [cluster_means.get(idx, None) for idx in na_indexes],
+                             [knn.get(idx, None) for idx in na_indexes],
+                             [cluster_knn.get(idx, None) for idx in na_indexes],
+                             real_values
                              )
 
                 st.success('Your answers have been saved')
