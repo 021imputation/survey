@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 from sklearn.experimental import enable_iterative_imputer
@@ -5,7 +7,6 @@ from sklearn.impute import IterativeImputer
 from sklearn.linear_model import BayesianRidge
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.impute import SimpleImputer
-from __future__ import annotations
 
 
 def weighted_average(distribution, weights):
