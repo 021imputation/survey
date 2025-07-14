@@ -1,6 +1,10 @@
 import pandas as pd
 from sklearn.neighbors import NearestNeighbors
-
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+from sklearn.linear_model import BayesianRidge
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.impute import SimpleImputer
 
 def weighted_average(distribution, weights):
     numerator = sum([distribution[i] * weights[i] for i in range(len(distribution))])
@@ -66,3 +70,90 @@ def impute_cluster_knn_mean(df, incomplete_column, na_indexes, reference_columns
             values.update(res)
 
     return {idx: values[idx] for idx in na_indexes}
+
+
+def impute_mice(
+        df: pd.DataFrame,
+        incomplete_column: str,
+        na_indexes,
+        *,
+        max_iter: int = 20,
+        m: int = 5,
+        estimator=None,
+        random_state: int | None = None
+) -> dict:
+    """
+    Imputuje jedną kolumnę metodą MICE i zwraca słownik {idx: wartość},
+    gdzie wartość to średnia z m niezależnych imputacji.
+    """
+    if estimator is None:
+        estimator = BayesianRidge()
+
+    imputations = []
+
+    for k in range(m):
+        imp = IterativeImputer(
+            estimator=estimator,
+            max_iter=max_iter,
+            sample_posterior=True,           # → Multiple Imputation
+            random_state=None if random_state is None else random_state + k
+        )
+        imputed_array = imp.fit_transform(df)
+
+        imputed_df = pd.DataFrame(
+            imputed_array, columns=df.columns, index=df.index)
+
+        imputations.append(imputed_df.loc[na_indexes, incomplete_column])
+
+    # pooling (średnia wartości z m imputacji)
+    mean_imputed = pd.concat(imputations, axis=1).mean(axis=1)
+    return mean_imputed.to_dict()
+
+def impute_with_rf(
+    df: pd.DataFrame,
+    column: str,
+    na_idx,
+    *,
+    n_estimators: int = 200,
+    max_depth: int | None = None,
+    random_state: int | None = None,
+    **rf_kwargs
+):
+    """
+    Imputuje brakujące wartości w `column` za pomocą pojedynczego
+    modelu Random Forest (regresja lub klasyfikacja).
+
+    Zwraca słownik {index: przewidziana_wartość}.
+    """
+    train_idx = df.index.difference(na_idx)
+    X_train = df.loc[train_idx].drop(columns=[column])
+    y_train = df.loc[train_idx, column]
+    X_pred  = df.loc[na_idx].drop(columns=[column])
+
+    X_train_enc = pd.get_dummies(X_train, drop_first=True)
+    X_pred_enc  = pd.get_dummies(X_pred, drop_first=True)
+    X_pred_enc  = X_pred_enc.reindex(columns=X_train_enc.columns, fill_value=0)
+
+    imputer = SimpleImputer(strategy="median")
+    X_train_imp = imputer.fit_transform(X_train_enc)
+    X_pred_imp  = imputer.transform(X_pred_enc)
+
+    if pd.api.types.is_numeric_dtype(y_train):
+        model = RandomForestRegressor(
+            n_estimators=n_estimators,
+            max_depth=max_depth,
+            random_state=random_state,
+            **rf_kwargs
+        )
+    else:
+        model = RandomForestClassifier(
+            n_estimators=n_estimators,
+            max_depth=max_depth,
+            random_state=random_state,
+            **rf_kwargs
+        )
+
+    model.fit(X_train_imp, y_train)
+    y_imputed = model.predict(X_pred_imp)
+
+    return dict(zip(na_idx, y_imputed))

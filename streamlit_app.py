@@ -6,7 +6,7 @@ from sklearn.metrics import mean_absolute_error, root_mean_squared_error
 from helpers.streamlit.callbacks import update_point_color
 from helpers.streamlit.utils import init_session_state, read_settings_from_file, validate, init_new_annotation_task
 from helpers.utils.dataset import add_projection_dimensions_to_df_incomplete, save_results, generate_incomplete_dataset
-from helpers.utils.imputation import impute_global_mean, impute_cluster_mean, impute_knn_mean, impute_cluster_knn_mean
+from helpers.utils.imputation import impute_global_mean, impute_cluster_mean, impute_knn_mean, impute_cluster_knn_mean, impute_mice, impute_with_rf
 from helpers.utils.projections import projections_dict, plot_scatter
 
 st.set_page_config(layout="wide")
@@ -159,7 +159,8 @@ if st.session_state['started']:
             cluster_means = impute_cluster_mean(df_incomplete, incomplete_column, na_indexes)
             knn = impute_knn_mean(df_incomplete, incomplete_column, na_indexes, reference_columns)
             cluster_knn = impute_cluster_knn_mean(df_incomplete, incomplete_column, na_indexes, reference_columns)
-
+            mice = impute_mice(df_incomplete,incomplete_column, na_indexes, random_state=seed_input)
+            random_forest = impute_with_rf(df_incomplete,incomplete_column,na_indexes,random_state=seed_input)
             real_values = st.session_state[f'ds_{dataset_settings["name"]}'][incomplete_column][na_indexes].tolist()
 
             rows = ["Annotator", "Mean", "Cluster mean", "knn", "cluster knn"]
@@ -184,6 +185,8 @@ if st.session_state['started']:
                              [cluster_means.get(idx, None) for idx in na_indexes],
                              [knn.get(idx, None) for idx in na_indexes],
                              [cluster_knn.get(idx, None) for idx in na_indexes],
+                             [mice.get(idx, None) for idx in na_indexes],
+                             [random_forest.get(idx, None) for idx in na_indexes],
                              real_values
                              )
 

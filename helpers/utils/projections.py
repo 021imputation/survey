@@ -4,11 +4,13 @@ from sklearn.decomposition import PCA
 import streamlit as st
 import plotly.express as px
 import pandas as pd
+from streamlit.components.v1 import html
+
 
 @st.cache_data
 def perform_pca_projection(X):
-    tsne = PCA(n_components=2, random_state=0)
-    X_projected = tsne.fit_transform(X)
+    pca = PCA(n_components=2, random_state=0)
+    X_projected = pca.fit_transform(X)
     return X_projected
 
 
@@ -71,7 +73,8 @@ def plot_scatter(df, incomplete_column, reference_columns, current_null_index, s
                     )
     fig = trace_annotation
     fig.add_traces(trace_points.data)
-
+    fig.update_xaxes(zeroline=False)
+    fig.update_yaxes(zeroline=False)
     fig.update_traces(textposition='top center', textfont_size=8,
                       textfont_color="#636363", marker_size=12
                       )
@@ -82,8 +85,7 @@ def plot_scatter(df, incomplete_column, reference_columns, current_null_index, s
     # fig.update_layout(hovermode="incomplete_column")
     add_annotation(fig, uncertain_x, uncertain_y)
 
-    scatter = st.plotly_chart(fig, key="scatter")
-
+    html(fig.to_html(include_plotlyjs="cdn", full_html=False,auto_play=False), height=600)
 
 def add_annotation(fig, x, y):
     fig.add_annotation(

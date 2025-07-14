@@ -41,7 +41,7 @@ def download_datasets(g, names):
 
 
 def save_results(g, values, annotator_id, seed, dataset_name, na_fraction, projection_key, MAE, RMSE,
-                 mean_preds, cluster_mean_preds, knn_preds, cluster_knn_preds,
+                 mean_preds, cluster_mean_preds, knn_preds, cluster_knn_preds, mice_preds,rf_preds,
                  true_values
                  ):
     gsheet = g.gc.open_by_url(g.url)
@@ -63,6 +63,8 @@ def save_results(g, values, annotator_id, seed, dataset_name, na_fraction, proje
         str(cluster_mean_preds),
         str(knn_preds),
         str(cluster_knn_preds),
+        str(mice_preds),
+        str(rf_preds),
         str(true_values)
     ]
     wsheet.insert_row(row_data, len(data) + 1)
