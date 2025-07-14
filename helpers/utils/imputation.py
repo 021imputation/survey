@@ -5,6 +5,8 @@ from sklearn.impute import IterativeImputer
 from sklearn.linear_model import BayesianRidge
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.impute import SimpleImputer
+from __future__ import annotations
+
 
 def weighted_average(distribution, weights):
     numerator = sum([distribution[i] * weights[i] for i in range(len(distribution))])
