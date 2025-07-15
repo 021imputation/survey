@@ -92,6 +92,13 @@ def impute_mice(
     if estimator is None:
         estimator = BayesianRidge()
 
+    cat_cols = (
+        df.select_dtypes(include=["object", "string", "category"])
+        .columns.drop(incomplete_column, errors="ignore")
+        .tolist()
+    )
+    df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
+    
     imputations = []
 
     for k in range(m):
