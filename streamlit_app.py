@@ -159,8 +159,14 @@ if st.session_state['started']:
             cluster_means = impute_cluster_mean(df_incomplete, incomplete_column, na_indexes)
             knn = impute_knn_mean(df_incomplete, incomplete_column, na_indexes, reference_columns)
             cluster_knn = impute_cluster_knn_mean(df_incomplete, incomplete_column, na_indexes, reference_columns)
-            mice = impute_mice(df_incomplete,incomplete_column, na_indexes, random_state=seed_input)
-            random_forest = impute_with_rf(df_incomplete,incomplete_column,na_indexes,random_state=seed_input)
+
+            mean_preds = pd.Series(global_means).reindex(na_indexes).to_numpy()
+            cluster_mean_preds = pd.Series(cluster_means).reindex(na_indexes).to_numpy()
+            knn_preds = pd.Series(knn).reindex(na_indexes).to_numpy()
+            cluster_knn_preds = pd.Series(cluster_knn).reindex(na_indexes).to_numpy()
+
+            #mice = impute_mice(df_incomplete,incomplete_column, na_indexes, random_state=seed_input)
+            #random_forest = impute_with_rf(df_incomplete,incomplete_column,na_indexes,random_state=seed_input)
             real_values = st.session_state[f'ds_{dataset_settings["name"]}'][incomplete_column][na_indexes].tolist()
 
             rows = ["Annotator", "Mean", "Cluster mean", "knn", "cluster knn"]
@@ -181,12 +187,11 @@ if st.session_state['started']:
                              projection_key,
                              MAE,  # Mean absolute error of imputations in order
                              RMSE,  # Root Mean Squared Error
-                             [global_means.get(idx, None) for idx in na_indexes],
-                             [cluster_means.get(idx, None) for idx in na_indexes],
-                             [knn.get(idx, None) for idx in na_indexes],
-                             [cluster_knn.get(idx, None) for idx in na_indexes],
-                             [mice.get(idx, None) for idx in na_indexes],
-                             [random_forest.get(idx, None) for idx in na_indexes],
+                             mean_preds,cluster_mean_preds,
+                             knn_preds,
+                             cluster_knn_preds,
+                             #[mice.get(idx, None) for idx in na_indexes],
+                             #[random_forest.get(idx, None) for idx in na_indexes],
                              real_values
                              )
 

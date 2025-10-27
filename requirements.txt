@@ -7,7 +7,7 @@ scikit-learn~=1.5.1          # zawiera IterativeImputer (tryb eksperymentalny) :
 # --- visualizations ---
 matplotlib~=3.8.4            # pandas ≥2.0 wymaga ≥3.7; 3.8.x pozostaje stabilne :contentReference[oaicite:2]{index=2}
 seaborn~=0.13.2              # zgodne z matplotlib ≥3.6 i pandas 2.x :contentReference[oaicite:3]{index=3}
-plotly~=5.24.1
+plotly~=6.2.0
 
 # --- streamlit & UI ---
 streamlit~=1.37.1
@@ -15,6 +15,8 @@ streamlit~=1.37.1
 # --- loading & auth ---
 gspread~=6.2.0
 gsheetsdb~=0.1.13
+google-auth~=2.33.0 
+gspread-dataframe>=3.3.1
 
 # --- dimensionality reduction ---
 umap-learn~=0.5.7            # nowsze poprawki i wsparcie dla scikit-learn 1.5 :contentReference[oaicite:4]{index=4}
@@ -25,3 +27,5 @@ python-dateutil~=2.8.2
 pytz~=2024.1
 six~=1.16.0
 xlrd~=2.0.1
+
+umap~=0.1.1

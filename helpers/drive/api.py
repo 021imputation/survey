@@ -3,6 +3,12 @@ import pandas as pd
 import gspread
 import streamlit as st
 from google.oauth2 import service_account
+import gspread
+from gspread_dataframe import set_with_dataframe
+
+from helpers.utils.dataset import build_results_df
+
+
 # from gsheetsdb import connect
 
 class GSAuthentication:
@@ -41,30 +47,34 @@ def download_datasets(g, names):
 
 
 def save_results(g, values, annotator_id, seed, dataset_name, na_fraction, projection_key, MAE, RMSE,
-                 mean_preds, cluster_mean_preds, knn_preds, cluster_knn_preds, mice_preds,rf_preds,
+                 mean_preds, cluster_mean_preds, knn_preds, cluster_knn_preds,
+                 #mice_preds,
+                 #rf_preds,
                  true_values
                  ):
+
+    df=build_results_df(values=values, true_values=true_values,
+        mean_preds=mean_preds, cluster_mean_preds=cluster_mean_preds,
+        knn_preds=knn_preds, cluster_knn_preds=cluster_knn_preds,
+        annotator_id=annotator_id, seed=seed, dataset_name=dataset_name,
+        na_fraction=na_fraction, projection=projection_key, MAE=MAE, RMSE=RMSE)
     gsheet = g.gc.open_by_url(g.url)
     datasets = {"iris": 0, "wola": 1, "stamp_type": 2}
-    worksheet_number = datasets[dataset_name]
-    wsheet = gsheet.get_worksheet(worksheet_number)
-    data = pd.DataFrame(wsheet.get_all_values())
-    now = time.localtime(time.time())
-    row_data = [
-        time.strftime("%m/%d/%Y, %H:%M:%S", now),
-        annotator_id,
-        seed,
-        na_fraction,
-        projection_key,
-        str(values),
-        str(MAE),
-        str(RMSE),
-        str(mean_preds),           # nowe kolumny
-        str(cluster_mean_preds),
-        str(knn_preds),
-        str(cluster_knn_preds),
-        str(mice_preds),
-        str(rf_preds),
-        str(true_values)
-    ]
-    wsheet.insert_row(row_data, len(data) + 1)
+    wsheet = gsheet.get_worksheet(datasets[dataset_name])
+
+    # 2. Sprawdź, czy arkusz jest pusty
+    existing_data = wsheet.get_all_values()
+    is_empty = (len(existing_data) == 0)
+
+    # 3. Wstaw DataFrame (z nagłówkami tylko jeśli arkusz był pusty)
+    start_row = 1 if is_empty else len(existing_data) + 1
+
+    set_with_dataframe(
+        worksheet=wsheet,
+        dataframe=df,
+        row=start_row,
+        include_column_header=is_empty,  # nagłówki tylko przy pierwszym zapisie
+        include_index=False,
+        resize=False  # nie zmieniaj wymiarów arkusza
+    )
+
