@@ -41,8 +41,8 @@ def find_uncertain_y_indexes(df_incomplete, dataset_settings, na_indexes):
 
 def save_results(values, seed, dataset_name, na_fraction,projection_key,MAE,RMSE,
                  mean_preds, cluster_mean_preds, knn_preds, cluster_knn_preds,
-                 #mice_preds,
-                 #random_forest_preds,
+                 mice_preds,
+                 random_forest_preds,
                  true_values):
     api.save_results(
         st.session_state["gsheet"],
@@ -58,8 +58,8 @@ def save_results(values, seed, dataset_name, na_fraction,projection_key,MAE,RMSE
         cluster_mean_preds,
         knn_preds,
         cluster_knn_preds,
-        #mice_preds,
-        #random_forest_preds,
+        mice_preds,
+        random_forest_preds,
         true_values
     )
 import pandas as pd
@@ -67,7 +67,7 @@ import time
 
 def build_results_df(
     values, true_values,
-    mean_preds, cluster_mean_preds, knn_preds, cluster_knn_preds,
+    mean_preds, cluster_mean_preds, knn_preds, cluster_knn_preds,mice_preds,random_forest_preds,
     annotator_id, seed, dataset_name, na_fraction, projection,
     MAE, RMSE
 ):
@@ -82,6 +82,8 @@ def build_results_df(
     df["cluster_mean_preds"]          = np.asarray(cluster_mean_preds)
     df["knn_preds"]                   = np.asarray(knn_preds)
     df["cluster_knn_preds"]           = np.asarray(cluster_knn_preds)
+    df["mice_preds"]                  =np.asarray(mice_preds)
+    df["random_forest_preds"]         = np.asarray(random_forest_preds)
 
     df["data"]          = ts
     df["annotator_id"]  = annotator_id
@@ -100,21 +102,27 @@ def build_results_df(
     df["MAE cluster_mean_preds"]        = MAE[2]
     df["MAE knn_preds"]                 = MAE[3]
     df["MAE cluster_knn_preds"]         = MAE[4]
+    df["MAE mice_preds"]                = MAE[5]
+    df["MAE random_forest_preds"]       =MAE[6]
 
     df["RMSE annotator predicted value"] = RMSE[0]
     df["RMSE mean_preds"]                = RMSE[1]
     df["RMSE cluster_mean_preds"]        = RMSE[2]
     df["RMSE knn_preds"]                 = RMSE[3]
     df["RMSE cluster_knn_preds"]         = RMSE[4]
+    df["RMSE mice_preds"]                = RMSE[5]
+    df["RMSE random_forest_preds"]       = RMSE[6]
+
+
     cols = [
         'data','annotator_id','seed','na_fraction','projection','point no',
         'true_values','id_empty1','id_empty2','id_empty3',
         'annotator predicted value','mean_preds','cluster_mean_preds','knn_preds','cluster_knn_preds',
-        'method_empty1','method_empty2','method_empty3','method_empty4','method_empty5',
+        'mice_preds','random_forest_preds','method_empty3','method_empty4','method_empty5',
         'MAE annotator predicted value','MAE mean_preds','MAE cluster_mean_preds','MAE knn_preds','MAE cluster_knn_preds',
-        'MAE_empty1','MAE_empty2','MAE_empty3','MAE_empty4','MAE_empty5',
+        'MAE mice_preds','MAE random_forest_preds','MAE_empty3','MAE_empty4','MAE_empty5',
         'RMSE annotator predicted value','RMSE mean_preds','RMSE cluster_mean_preds','RMSE knn_preds','RMSE cluster_knn_preds',
-        'RMSE_empty1','RMSE_empty2','RMSE_empty3','RMSE_empty4','RMSE_empty5'
+        'RMSE mice_preds','RMSE random_forest_preds','RMSE_empty3','RMSE_empty4','RMSE_empty5'
     ]
     return df[cols]
 

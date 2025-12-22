@@ -159,18 +159,37 @@ if st.session_state['started']:
             cluster_means = impute_cluster_mean(df_incomplete, incomplete_column, na_indexes)
             knn = impute_knn_mean(df_incomplete, incomplete_column, na_indexes, reference_columns)
             cluster_knn = impute_cluster_knn_mean(df_incomplete, incomplete_column, na_indexes, reference_columns)
+            mice = impute_mice(
+                df_incomplete,
+                incomplete_column,
+                na_indexes,
+                random_state=st.session_state['dataset_generation_seed'],
+                reference_columns=reference_columns,
+                max_iter=10,
+                precision=dataset_settings['precision'],
+            )
+
+            random_forest = impute_with_rf(
+                df_incomplete,
+                incomplete_column,
+                na_indexes,
+                random_state=st.session_state['dataset_generation_seed'],
+                reference_columns=reference_columns,
+                n_estimators=300,
+                n_jobs=1,
+                precision=dataset_settings['precision'],
+            )
 
             mean_preds = pd.Series(global_means).reindex(na_indexes).to_numpy()
             cluster_mean_preds = pd.Series(cluster_means).reindex(na_indexes).to_numpy()
             knn_preds = pd.Series(knn).reindex(na_indexes).to_numpy()
             cluster_knn_preds = pd.Series(cluster_knn).reindex(na_indexes).to_numpy()
-
-            #mice = impute_mice(df_incomplete,incomplete_column, na_indexes, random_state=seed_input)
-            #random_forest = impute_with_rf(df_incomplete,incomplete_column,na_indexes,random_state=seed_input)
+            mice_preds = pd.Series(mice).reindex(na_indexes).to_numpy()
+            rf_preds = pd.Series(random_forest).reindex(na_indexes).to_numpy()
             real_values = st.session_state[f'ds_{dataset_settings["name"]}'][incomplete_column][na_indexes].tolist()
 
-            rows = ["Annotator", "Mean", "Cluster mean", "knn", "cluster knn"]
-            imputations = [st.session_state['imputed_values'], global_means, cluster_means, knn, cluster_knn]
+            rows = ["Annotator", "Mean", "Cluster mean", "knn", "cluster knn", "MICE","RF"]
+            imputations = [st.session_state['imputed_values'], global_means, cluster_means, knn, cluster_knn, mice,random_forest]
             MAE = [mean_absolute_error(list(imputation.values()), real_values) for imputation in imputations]
             RMSE = [root_mean_squared_error(list(imputation.values()), real_values) for imputation in imputations]
 
@@ -190,8 +209,8 @@ if st.session_state['started']:
                              mean_preds,cluster_mean_preds,
                              knn_preds,
                              cluster_knn_preds,
-                             #[mice.get(idx, None) for idx in na_indexes],
-                             #[random_forest.get(idx, None) for idx in na_indexes],
+                             mice_preds,
+                             rf_preds,
                              real_values
                              )
 

@@ -48,14 +48,14 @@ def download_datasets(g, names):
 
 def save_results(g, values, annotator_id, seed, dataset_name, na_fraction, projection_key, MAE, RMSE,
                  mean_preds, cluster_mean_preds, knn_preds, cluster_knn_preds,
-                 #mice_preds,
-                 #rf_preds,
+                 mice_preds,
+                 rf_preds,
                  true_values
                  ):
 
     df=build_results_df(values=values, true_values=true_values,
         mean_preds=mean_preds, cluster_mean_preds=cluster_mean_preds,
-        knn_preds=knn_preds, cluster_knn_preds=cluster_knn_preds,
+        knn_preds=knn_preds, cluster_knn_preds=cluster_knn_preds,mice_preds=mice_preds,random_forest_preds=rf_preds,
         annotator_id=annotator_id, seed=seed, dataset_name=dataset_name,
         na_fraction=na_fraction, projection=projection_key, MAE=MAE, RMSE=RMSE)
     gsheet = g.gc.open_by_url(g.url)

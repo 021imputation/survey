@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
@@ -75,95 +76,78 @@ def impute_cluster_knn_mean(df, incomplete_column, na_indexes, reference_columns
     return {idx: values[idx] for idx in na_indexes}
 
 
-def impute_mice(
-        df: pd.DataFrame,
-        incomplete_column: str,
-        na_indexes,
-        *,
-        max_iter: int = 20,
-        m: int = 5,
-        estimator=None,
-        random_state: int | None = None
-) -> dict:
+def impute_mice(df_incomplete, incomplete_column, na_indexes, random_state, reference_columns=None, max_iter=10, precision=None):
     """
-    Imputuje jedną kolumnę metodą MICE i zwraca słownik {idx: wartość},
-    gdzie wartość to średnia z m niezależnych imputacji.
+    IterativeImputer (MICE-ish) na macierzy [y|X], gdzie:
+      y = incomplete_column
+      X = reference_columns (tylko numeryczne)
+    Zwraca dict {idx: pred} dla idx z na_indexes w tej samej kolejności.
     """
-    if estimator is None:
-        estimator = BayesianRidge()
+    if reference_columns is None:
+        raise ValueError("impute_mice: musisz przekazać reference_columns (lista kolumn numerycznych).")
 
-    cat_cols = (
-        df.select_dtypes(include=["object", "string", "category"])
-        .columns.drop(incomplete_column, errors="ignore")
-        .tolist()
+    pos = df_incomplete.index.get_indexer(na_indexes)
+    if (pos < 0).any():
+        raise KeyError("impute_mice: na_indexes zawiera indeksy nieobecne w df_incomplete.")
+
+    y = pd.to_numeric(df_incomplete[incomplete_column], errors="coerce").to_numpy(dtype=float)
+    X = df_incomplete[reference_columns].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)
+
+    y_missing = y.copy()
+    y_missing[pos] = np.nan
+    M = np.column_stack([y_missing, X])
+
+    imp = IterativeImputer(
+        estimator=BayesianRidge(),
+        max_iter=int(max_iter),
+        random_state=int(random_state),
+        imputation_order="ascending",
+        initial_strategy="mean",
+        skip_complete=True,
     )
-    df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
-    
-    imputations = []
+    M_imp = imp.fit_transform(M)
+    preds = M_imp[pos, 0]
 
-    for k in range(m):
-        imp = IterativeImputer(
-            estimator=estimator,
-            max_iter=max_iter,
-            sample_posterior=True,           # → Multiple Imputation
-            random_state=None if random_state is None else random_state + k
-        )
-        imputed_array = imp.fit_transform(df)
+    if precision is not None and precision > 0:
+        decimals = int(max(0, np.ceil(-np.log10(precision))))
+        preds = np.round(np.round(preds / precision) * precision, decimals=decimals)
 
-        imputed_df = pd.DataFrame(
-            imputed_array, columns=df.columns, index=df.index)
+    return {idx: float(val) for idx, val in zip(na_indexes, preds)}
 
-        imputations.append(imputed_df.loc[na_indexes, incomplete_column])
-
-    # pooling (średnia wartości z m imputacji)
-    mean_imputed = pd.concat(imputations, axis=1).mean(axis=1)
-    return mean_imputed.to_dict()
-
-def impute_with_rf(
-    df: pd.DataFrame,
-    column: str,
-    na_idx,
-    *,
-    n_estimators: int = 200,
-    max_depth: int | None = None,
-    random_state: int | None = None,
-    **rf_kwargs
-):
+def impute_with_rf(df_incomplete, incomplete_column, na_indexes, random_state, reference_columns=None, n_estimators=300, n_jobs=1, precision=None):
     """
-    Imputuje brakujące wartości w `column` za pomocą pojedynczego
-    modelu Random Forest (regresja lub klasyfikacja).
-
-    Zwraca słownik {index: przewidziana_wartość}.
+    RandomForestRegressor:
+      - trenuje na wierszach gdzie y znane (poza na_indexes)
+      - przewiduje dla na_indexes
+    Zwraca dict {idx: pred} w tej samej kolejności co na_indexes.
     """
-    train_idx = df.index.difference(na_idx)
-    X_train = df.loc[train_idx].drop(columns=[column])
-    y_train = df.loc[train_idx, column]
-    X_pred  = df.loc[na_idx].drop(columns=[column])
+    if reference_columns is None:
+        raise ValueError("impute_with_rf: musisz przekazać reference_columns (lista kolumn numerycznych).")
 
-    X_train_enc = pd.get_dummies(X_train, drop_first=True)
-    X_pred_enc  = pd.get_dummies(X_pred, drop_first=True)
-    X_pred_enc  = X_pred_enc.reindex(columns=X_train_enc.columns, fill_value=0)
+    pos = df_incomplete.index.get_indexer(na_indexes)
+    if (pos < 0).any():
+        raise KeyError("impute_with_rf: na_indexes zawiera indeksy nieobecne w df_incomplete.")
 
-    imputer = SimpleImputer(strategy="median")
-    X_train_imp = imputer.fit_transform(X_train_enc)
-    X_pred_imp  = imputer.transform(X_pred_enc)
+    y = pd.to_numeric(df_incomplete[incomplete_column], errors="coerce").to_numpy(dtype=float)
+    X = df_incomplete[reference_columns].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)
 
-    if pd.api.types.is_numeric_dtype(y_train):
-        model = RandomForestRegressor(
-            n_estimators=n_estimators,
-            max_depth=max_depth,
-            random_state=random_state,
-            **rf_kwargs
-        )
-    else:
-        model = RandomForestClassifier(
-            n_estimators=n_estimators,
-            max_depth=max_depth,
-            random_state=random_state,
-            **rf_kwargs
-        )
+    train_mask = np.ones(len(df_incomplete), dtype=bool)
+    train_mask[pos] = False
+    train_mask &= ~np.isnan(y)
+    if train_mask.sum() == 0:
+        raise ValueError("impute_with_rf: brak wierszy treningowych (wszystko NaN po maskowaniu).")
 
-    model.fit(X_train_imp, y_train)
-    y_imputed = model.predict(X_pred_imp)
+    rf = RandomForestRegressor(
+        n_estimators=int(n_estimators),
+        random_state=int(random_state),
+        n_jobs=int(n_jobs),
+    )
+    rf.fit(X[train_mask], y[train_mask])
 
-    return dict(zip(na_idx, y_imputed))
+    preds = rf.predict(X[pos])
+
+    if precision is not None and precision > 0:
+        decimals = int(max(0, np.ceil(-np.log10(precision))))
+        preds = np.round(np.round(preds / precision) * precision, decimals=decimals)
+
+    return {idx: float(val) for idx, val in zip(na_indexes, preds)}
